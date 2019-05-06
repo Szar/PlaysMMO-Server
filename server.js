@@ -32,6 +32,8 @@ io.on('connection',function(socket){
 			direction: {
 				prev_x: start.x,
 				prev_y: start.y,
+				cx: 0,
+				cy: 0,
 				d: 'sw'
 			},
 			skin: start_data.skin,
