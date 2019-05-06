@@ -1,9 +1,28 @@
 var express = require('express');
 var app = express();
-var server = require('http').Server(app);
+var server = require('https').createServer(credentials, app).listen(8000, function () {
+	console.log('Started Socket Server');
+ });
 var io = require('socket.io').listen(server);
 var fetch = require('node-fetch');
 var config = require('./config');
+
+
+
+
+
+SSLCertificateFile /etc/letsencrypt/live/hennessy.co.de/fullchain.pem
+SSLCertificateKeyFile 
+Include /etc/letsencrypt/options-ssl-apache.conf
+
+
+var credentials = {
+  ca:   fs.readFileSync('/etc/letsencrypt/live/hennessy.co.de/chain.pem'),
+  key:  fs.readFileSync('/etc/letsencrypt/live/hennessy.co.de/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/hennessy.co.de/cert.pem'),
+  secureProtocol: 'SSLv23_method',
+};
+
 
 var getUser = function(uid, c){
 	fetch("https://api.twitch.tv/helix/users?id="+uid, { 
@@ -19,7 +38,6 @@ var getUser = function(uid, c){
 }
 
 server.lastPlayderID = 0;
-server.listen(process.env.PORT || 8000);
 
 io.on('connection',function(socket){
 	var uid = server.lastPlayderID++;
