@@ -25,7 +25,8 @@ io.on('connection',function(socket){
 	var uid = server.lastPlayderID++;
 	uid = uid.toString();
 	
-    socket.on('newplayer',function(start){
+    socket.on('newplayer',function(start_data){
+		var start = start_data.start
 		socket.player = {
 			uid: uid,
 			direction: {
@@ -33,6 +34,7 @@ io.on('connection',function(socket){
 				prev_y: start.y,
 				d: 'sw'
 			},
+			skin: start_data.skin,
 			twitch_name: "Player "+uid
 		};
 		socket.emit('updateself',socket.player);
@@ -42,7 +44,11 @@ io.on('connection',function(socket){
 		});
 		socket.broadcast.emit('newplayer', socket.player);
 		
-        socket.on('move',function(data){
+        socket.on('updateskin',function(data){
+			socket.player.skin = data;
+			socket.broadcast.emit('updateskin',socket.player);
+		});
+		socket.on('move',function(data){
 			var d = socket.player
 			d.direction = data.direction
 			socket.broadcast.emit('move',d);
