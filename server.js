@@ -1,5 +1,6 @@
 var express = require('express');
 var fs = require('fs');
+var app = express();
 var config = require('./config');
 var credentials = {
 	ca:   fs.readFileSync(config.ssl_dir+'chain.pem'),
