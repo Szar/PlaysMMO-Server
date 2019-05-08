@@ -1,27 +1,17 @@
 var express = require('express');
-var app = express();
+var fs = require('fs');
+var config = require('./config');
+var credentials = {
+	ca:   fs.readFileSync(config.ssl_dir+'chain.pem'),
+	key:  fs.readFileSync(config.ssl_dir+'privkey.pem'),
+	cert: fs.readFileSync(config.ssl_dir+'cert.pem'),
+	secureProtocol: 'SSLv23_method',
+};
 var server = require('https').createServer(credentials, app).listen(8000, function () {
-	console.log('Started Socket Server');
+	console.log('Started!');
  });
 var io = require('socket.io').listen(server);
 var fetch = require('node-fetch');
-var config = require('./config');
-
-
-
-
-
-SSLCertificateFile /etc/letsencrypt/live/hennessy.co.de/fullchain.pem
-SSLCertificateKeyFile 
-Include /etc/letsencrypt/options-ssl-apache.conf
-
-
-var credentials = {
-  ca:   fs.readFileSync('/etc/letsencrypt/live/hennessy.co.de/chain.pem'),
-  key:  fs.readFileSync('/etc/letsencrypt/live/hennessy.co.de/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/hennessy.co.de/cert.pem'),
-  secureProtocol: 'SSLv23_method',
-};
 
 
 var getUser = function(uid, c){
