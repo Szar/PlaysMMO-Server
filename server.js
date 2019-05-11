@@ -3,7 +3,7 @@ var fs = require('fs');
 var app = express();
 var config = require('./config');
 var credentials = {
-	ca:   fs.readFileSync(config.ssl_dir+'chain.pem'),
+	ca:   typeof config.local!=="undefined" && !config.local? fs.readFileSync(config.ssl_dir+'chain.pem') : null,
 	key:  fs.readFileSync(config.ssl_dir+'privkey.pem'),
 	cert: fs.readFileSync(config.ssl_dir+'cert.pem'),
 	secureProtocol: 'SSLv23_method',
@@ -34,22 +34,13 @@ io.on('connection',function(socket){
 	var uid = server.lastPlayderID++;
 	uid = uid.toString();
 	
-    socket.on('newplayer',function(start_data){
-		var start = start_data.start
-		socket.player = {
-			uid: uid,
-			direction: {
-				prev_x: start.x,
-				prev_y: start.y,
-				cx: 0,
-				cy: 0,
-				d: 'sw'
-			},
-			skin: start_data.skin,
-			twitch_name: "Player "+uid
-		};
-		socket.emit('updateself',socket.player);
-		socket.emit('connected',{
+    socket.on('newplayer',function(player){
+		socket.player = player;
+		socket.player.uid = uid
+		socket.player.twitch_name = "Player "+uid
+
+		socket.emit('updateself', socket.player);
+		socket.emit('connected', {
 			uid: uid,
 			players: getAllPlayers()
 		});
