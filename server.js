@@ -56,22 +56,37 @@ io.on('connection',function(socket){
 			socket.broadcast.emit('move',d);
 		});
 		socket.on('updateplayer',function(d){
-			getUser(d["channelId"], function(u){
-				socket.player["id"] = u["id"];
-				socket.player["twitch_login"] = u["login"]
-				socket.player["twitch_name"] = u["display_name"]
-				socket.player["twitch_image"] = u["profile_image_url"]
-				socket.broadcast.emit('updateplayer',socket.player);
-				socket.emit('updateself',socket.player);
-			})
+
+			if(d.is_twitch===false||typeof d.is_twitch==="undefined") {
+				socket.player["id"] = uid;
+				socket.player["twitch_name"] = d["twitch_name"]
+			}
+			else {
+				getUser(d["channelId"], function(u){
+					socket.player["id"] = u["id"];
+					socket.player["twitch_login"] = u["login"]
+					socket.player["twitch_name"] = u["display_name"]
+					socket.player["twitch_image"] = u["profile_image_url"]
+				})
+			}
+			console.log("updateplayer, updatename")
+			socket.broadcast.emit('updateplayer',socket.player);
+			socket.broadcast.emit('updatename',socket.player);
+			//socket.emit('updatename',socket.player);
+			socket.emit('updateself',socket.player);
 		});
 		socket.on('updatename',function(d){
-
 			socket.broadcast.emit('updatename',socket.player);
 		});
+		socket.on('sendChat',function(d){
+			socket.player.message = d;
+			socket.broadcast.emit('sendChat',socket.player);
+			socket.emit('sendChat',socket.player);
+		});
+
 
         socket.on('disconnect',function(){
-			socket.broadcast.emit('updatename',socket.player);
+			socket.broadcast.emit('remove',socket.player);
 			delete io.sockets.connected[socket["id"]];
         });
     });
