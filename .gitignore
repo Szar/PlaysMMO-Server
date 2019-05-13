@@ -67,3 +67,6 @@ yarn.lock
 ssl/
 
 nohup.out
+
+.DS_Store
+*.DS_Store

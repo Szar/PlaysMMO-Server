@@ -1,5 +1,5 @@
 {
-  "name": "basic-mmo-phaser",
+  "name": "playsmmo-server",
   "version": "1.0.0",
   "description": " Very basic multiplayer online game example made with Phaser, Node.js and Socket.io ",
   "main": "server.js",
@@ -7,27 +7,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Jerenaux/basic-mmo-phaser.git"
-  },
-  "keywords": [
-    "Phaser",
-    "Multiplayer",
-    "game",
-    "Node.js",
-    "socket.io"
-  ],
-  "author": "Jerome Renaux",
+  "author": "Szar",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/Jerenaux/basic-mmo-phaser/issues"
-  },
-  "homepage": "https://github.com/Jerenaux/basic-mmo-phaser#readme",
   "dependencies": {
     "express": "^4.15.2",
     "node-fetch": "^2.5.0",
-    "socket.io": "^1.7.3",
-    "twitch-api-v5": "^2.0.4"
+    "socket.io": "^1.7.3"
   }
 }

@@ -1,18 +1,18 @@
-var express = require('express');
-var fs = require('fs');
-var app = express();
-var config = require('./config');
-var credentials = {
-	ca:   typeof config.local!=="undefined" && !config.local? fs.readFileSync(config.ssl_dir+'chain.pem') : null,
-	key:  fs.readFileSync(config.ssl_dir+'privkey.pem'),
-	cert: fs.readFileSync(config.ssl_dir+'cert.pem'),
-	secureProtocol: 'SSLv23_method',
-};
-var server = require('https').createServer(credentials, app).listen(8000, function () {
-	console.log('Started!');
- });
-var io = require('socket.io').listen(server);
-var fetch = require('node-fetch');
+const express = require('express'),
+	fs = require('fs'),
+	fetch = require('node-fetch'),
+	app = express(),
+	config = require('../src/Config'),
+	credentials = {
+		ca:   typeof config.server.host!="localhost" ? fs.readFileSync(config.server.ssl_dir+'chain.pem') : null,
+		key:  fs.readFileSync(config.server.ssl_dir+'privkey.pem'),
+		cert: fs.readFileSync(config.server.ssl_dir+'cert.pem'),
+		secureProtocol: 'SSLv23_method',
+	};
+
+
+var io = require('socket.io').listen(require('https').createServer(credentials, app).listen(8000)),
+	i = 0;
 
 
 var getUser = function(uid, c){
@@ -28,75 +28,55 @@ var getUser = function(uid, c){
 	})
 }
 
-server.lastPlayderID = 0;
-
-io.on('connection',function(socket){
-	var uid = server.lastPlayderID++;
-	uid = uid.toString();
-	
-    socket.on('newplayer',function(player){
-		socket.player = player;
-		socket.player.uid = uid
-		socket.player.twitch_name = "Player "+uid
-
-		socket.emit('updateself', socket.player);
-		socket.emit('connected', {
-			uid: uid,
-			players: getAllPlayers()
-		});
-		socket.broadcast.emit('newplayer', socket.player);
-		
-        socket.on('updateskin',function(data){
-			socket.player.skin = data;
-			socket.broadcast.emit('updateskin',socket.player);
-		});
-		socket.on('move',function(data){
-			var d = socket.player
-			d.direction = data.direction
-			socket.broadcast.emit('move',d);
-		});
-		socket.on('updateplayer',function(d){
-
-			if(d.is_twitch===false||typeof d.is_twitch==="undefined") {
-				socket.player["id"] = uid;
-				socket.player["twitch_name"] = d["twitch_name"]
-			}
-			else {
-				getUser(d["channelId"], function(u){
-					socket.player["id"] = u["id"];
-					socket.player["twitch_login"] = u["login"]
-					socket.player["twitch_name"] = u["display_name"]
-					socket.player["twitch_image"] = u["profile_image_url"]
-				})
-			}
-			console.log("updateplayer, updatename")
-			socket.broadcast.emit('updateplayer',socket.player);
-			socket.broadcast.emit('updatename',socket.player);
-			//socket.emit('updatename',socket.player);
-			socket.emit('updateself',socket.player);
-		});
-		socket.on('updatename',function(d){
-			socket.broadcast.emit('updatename',socket.player);
-		});
-		socket.on('sendChat',function(d){
-			socket.player.message = d;
-			socket.broadcast.emit('sendChat',socket.player);
-			socket.emit('sendChat',socket.player);
-		});
-
-
-        socket.on('disconnect',function(){
-			socket.broadcast.emit('remove',socket.player);
-			delete io.sockets.connected[socket["id"]];
-        });
-    });
-});
-
-function getAllPlayers(){
-    var players = [];
-    Object.keys(io.sockets.connected).forEach(function(socketID){
-        var player = io.sockets.connected[socketID].player;
-        if(player) players.push(player);
-    });
-    return players;
+var getPlayers = function() {
+	var data = [];
+	Object.keys(io.sockets.connected).forEach(function(id){
+		var d = io.sockets.connected[id].player;
+		if(d) data.push(d);
+	});
+	return data
 }
+
+
+io.on('connection', function(socket){
+	const id = (i++).toString();
+	socket.channel = "development"
+	socket.on('connected',function(data){
+		socket.join(socket.channel);
+		socket.player = data;
+		socket.player.id = id
+		socket.player.name = "Player "+id
+		socket.emit('connected', {
+			"id": id,
+			"players": getPlayers()
+		});
+		io.sockets.in(socket.channel).emit('joined', socket.player);
+		socket.on('move',function(data){
+			socket.player.x = data.x
+			socket.player.y = data.y
+			socket.player.d = data.d
+			socket.player.moving = data.moving
+			io.sockets.in(socket.channel).emit('move', socket.player);
+		});
+		socket.on('message',function(message){
+			socket.player.message = message;
+			io.sockets.in(socket.channel).emit('message',socket.player);
+			socket.player.message = "";
+		});
+		socket.on('update',function(data){
+			if(data.hasOwnProperty("skin")) {
+				socket.player.skin = data.skin;
+			}
+			if(data.hasOwnProperty("name")) {
+				socket.player.name = data.name;
+			}
+			
+			io.sockets.in(socket.channel).emit('update',socket.player);
+		});
+	});
+	socket.on('disconnect',function(){
+		io.sockets.in(socket.channel).emit('remove', socket.player);
+		delete io.sockets.connected[socket["id"]];
+		socket.leave(socket.channel);
+	});
+});
