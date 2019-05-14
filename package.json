@@ -12,6 +12,7 @@
   "dependencies": {
     "express": "^4.15.2",
     "node-fetch": "^2.5.0",
-    "socket.io": "^1.7.3"
+    "socket.io": "^1.7.3",
+    "twitch-js": "^1.2.17"
   }
 }
