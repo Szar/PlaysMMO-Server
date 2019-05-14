@@ -10,14 +10,12 @@ const express = require('express'),
 		secureProtocol: 'SSLv23_method',
 	};
 
-
 var io = require('socket.io').listen(require('https').createServer(credentials, app).listen(8000)),
 	i = 0;
 
-
-var getUser = function(uid, c){
-	fetch("https://api.twitch.tv/helix/users?id="+uid, { 
-		headers: { 'Client-ID': config.twitch_clientid,
+var getUser = function(data, c){
+	fetch("https://api.twitch.tv/helix/users?id="+data["user_id"], { 
+		headers: { 'Client-ID': data["clientId"],
 	  }})
 	.then(response => response.json())
 	.then(function(d){
@@ -37,20 +35,22 @@ var getPlayers = function() {
 	return data
 }
 
-
 io.on('connection', function(socket){
 	const id = (i++).toString();
 	socket.channel = "development"
+	socket.player = {};
 	socket.on('connected',function(data){
-		socket.join(socket.channel);
-		socket.player = data;
+		for(key in data) {
+			socket.player[key] = data[key]
+		}
 		socket.player.id = id
-		socket.player.name = "Player "+id
+		socket.player.loaded = true;
 		socket.emit('connected', {
 			"id": id,
 			"players": getPlayers()
 		});
 		io.sockets.in(socket.channel).emit('joined', socket.player);
+		io.sockets.in(socket.channel).emit('update', socket.player);
 		socket.on('move',function(data){
 			socket.player.x = data.x
 			socket.player.y = data.y
@@ -63,6 +63,9 @@ io.on('connection', function(socket){
 			io.sockets.in(socket.channel).emit('message',socket.player);
 			socket.player.message = "";
 		});
+		socket.on('jump',function(){
+			io.sockets.in(socket.channel).emit('jump', socket.player);
+		});
 		socket.on('update',function(data){
 			if(data.hasOwnProperty("skin")) {
 				socket.player.skin = data.skin;
@@ -70,9 +73,22 @@ io.on('connection', function(socket){
 			if(data.hasOwnProperty("name")) {
 				socket.player.name = data.name;
 			}
-			
 			io.sockets.in(socket.channel).emit('update',socket.player);
 		});
+		
+
+		
+	});
+	socket.on('auth',function(data){
+		socket.channel = data["channelId"]
+		socket.join(socket.channel);
+		socket.player.user_id = data["user_id"]
+		socket.player.name = data["user_id"]
+		getUser(data, function(d){
+			socket.player.name = d["display_name"]
+			io.sockets.in(socket.channel).emit('update', socket.player);
+			
+		});	
 	});
 	socket.on('disconnect',function(){
 		io.sockets.in(socket.channel).emit('remove', socket.player);
