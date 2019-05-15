@@ -30,11 +30,11 @@ var getUser = function(data, c){
 	})
 }
 
-var getPlayers = function() {
+var getPlayers = function(channel) {
 	var data = [];
 	Object.keys(io.sockets.connected).forEach(function(id){
 		var d = io.sockets.connected[id].player;
-		if(d) data.push(d);
+		if(d && io.sockets.connected[id].channel==channel && d.hasOwnProperty("x")) data.push(d);
 	});
 	return data
 }
@@ -42,17 +42,24 @@ var getPlayers = function() {
 io.on('connection', function(socket){
 	const id = (i++).toString();
 	socket.channel = "development"
-	socket.player = {};
+	socket.player = {id: id};
+	
 	socket.on('connected',function(data){
+		
+		console.log(socket.channel);
+		socket.join(socket.channel);
 		for(key in data) {
 			socket.player[key] = data[key]
 		}
 		socket.player.id = id
 		socket.player.loaded = true;
+		console.log(getPlayers(socket.channel));
+		//console.log(io.sockets.in(socket.channel));
 		socket.emit('connected', {
 			"id": id,
-			"players": getPlayers()
+			"players": getPlayers(socket.channel)
 		});
+		//console.log(socket.player)
 		io.sockets.in(socket.channel).emit('joined', socket.player);
 		io.sockets.in(socket.channel).emit('update', socket.player);
 		socket.on('move',function(data){
@@ -84,8 +91,8 @@ io.on('connection', function(socket){
 		
 	});
 	socket.on('auth',function(data){
+		//socket.leave("development");
 		socket.channel = data["channelId"]
-		socket.join(socket.channel);
 		socket.player.user_id = data["user_id"]
 		socket.player.name = data["user_id"]
 		getUser(data, function(d){
@@ -106,7 +113,9 @@ io.on('connection', function(socket){
 						},
 					});
 					chat_clients[channel_name].on('chat', (channel, userstate, message, self) => {
-	
+						console.log(ids)
+						console.log(ids[userstate['display-name']]);
+						console.log(userstate);
 						io.sockets.in(socket.channel).emit('message',{
 							"id":ids[userstate['display-name']],
 							"message": message
