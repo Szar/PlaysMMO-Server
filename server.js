@@ -39,52 +39,76 @@ var getPlayers = function(channel) {
 	return data
 }
 
+var isPlayer = function(d,channel) {
+	return d.hasOwnProperty("x") && d.hasOwnProperty("channel")
+}
+
 io.on('connection', function(socket){
 	const id = (i++).toString();
 	socket.channel = "development"
 	socket.player = {id: id};
-	
+	socket.init = false
 	socket.on('connected',function(data){
-		
-		console.log(socket.channel);
+
 		socket.join(socket.channel);
 		for(key in data) {
 			socket.player[key] = data[key]
 		}
 		socket.player.id = id
 		socket.player.loaded = true;
+		socket.init = true
 		console.log(getPlayers(socket.channel));
 		//console.log(io.sockets.in(socket.channel));
 		socket.emit('connected', {
 			"id": id,
 			"players": getPlayers(socket.channel)
 		});
-		//console.log(socket.player)
-		io.sockets.in(socket.channel).emit('joined', socket.player);
-		io.sockets.in(socket.channel).emit('update', socket.player);
+
+		
+		if(isPlayer(socket.player)) {
+			console.log("=== Join ===")
+			console.log(socket.player)
+			io.sockets.in(socket.channel).emit('joined', socket.player);
+			io.sockets.in(socket.channel).emit('update', socket.player);
+		}
 		socket.on('move',function(data){
-			socket.player.x = data.x
-			socket.player.y = data.y
-			socket.player.d = data.d
-			socket.player.moving = data.moving
-			io.sockets.in(socket.channel).emit('move', socket.player);
+			if(isPlayer(socket.player)) {
+				console.log("=== Move ===")
+				socket.player
+				socket.player.x = data.x
+				socket.player.y = data.y
+				socket.player.d = data.d
+				socket.player.moving = data.moving
+				io.sockets.in(socket.channel).emit('move', socket.player);
+			}
+			
 		});
 		socket.on('message',function(message){
-			socket.player.message = message;
-			io.sockets.in(socket.channel).emit('message',socket.player);
-			socket.player.message = "";
+			if(isPlayer(socket.player)) {
+				console.log("=== message ===")
+				socket.player
+				socket.player.message = message;
+				io.sockets.in(socket.channel).emit('message',socket.player);
+				socket.player.message = "";
+			}
 		});
 		socket.on('jump',function(){
-			io.sockets.in(socket.channel).emit('jump', socket.player);
+			if(isPlayer(socket.player)) {
+				io.sockets.in(socket.channel).emit('jump', socket.player);
+			}
 		});
 		socket.on('update',function(data){
-			if(data.hasOwnProperty("skin")) {
-				socket.player.skin = data.skin;
+			if(isPlayer(socket.player)) {
+				console.log("=== update ===")
+				socket.player
+				if(data.hasOwnProperty("skin")) {
+					socket.player.skin = data.skin;
+				}
+				if(data.hasOwnProperty("name")) {
+					socket.player.name = data.name;
+				}
+				io.sockets.in(socket.channel).emit('update',socket.player);
 			}
-			if(data.hasOwnProperty("name")) {
-				socket.player.name = data.name;
-			}
-			io.sockets.in(socket.channel).emit('update',socket.player);
 		});
 		
 
@@ -93,12 +117,17 @@ io.on('connection', function(socket){
 	socket.on('auth',function(data){
 		//socket.leave("development");
 		socket.channel = data["channelId"]
-		socket.player.user_id = data["user_id"]
+		//socket.player.user_id = data["user_id"]
 		socket.player.name = data["user_id"]
 		getUser(data, function(d){
 			socket.player.name = d["display_name"]
 			ids[socket.player.name] = socket.player.id
-			io.sockets.in(socket.channel).emit('update', socket.player);
+			if(socket.init) {
+				io.sockets.in(socket.channel).emit('joined', socket.player);
+				io.sockets.in(socket.channel).emit('update', socket.player);
+			}
+			//io.sockets.in(socket.channel).emit('update', socket.player);
+			
 			if(channels.indexOf(socket.channel) === -1){
 				channels.push(socket.channel);
 				getUser({ 
